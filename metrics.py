@@ -200,3 +200,48 @@ def normalized_mutual_info_scratch(labels_true, labels_pred):
     h_pred = entropy(labels_pred)
     mi = mutual_info(labels_true, labels_pred)
     return 2 * mi / (h_true + h_pred + 1e-10)
+
+def confusion_matrix_scratch(y_true, y_pred):
+    """
+    Computes the confusion matrix (Contingency Table).
+    Rows: True classes
+    Cols: Predicted clusters
+    """
+    classes = np.unique(y_true)
+    clusters = np.unique(y_pred)
+    n_classes = len(classes)
+    n_clusters = len(clusters)
+    
+    cm = np.zeros((n_classes, n_clusters), dtype=int)
+    
+    # Map class labels to indices 0..N-1
+    class_map = {c: i for i, c in enumerate(classes)}
+    cluster_map = {k: j for j, k in enumerate(clusters)}
+    
+    for t, p in zip(y_true, y_pred):
+        r = class_map[t]
+        c = cluster_map[p]
+        cm[r, c] += 1
+        
+    return cm, classes, clusters
+
+def align_predictions(y_true, y_pred):
+    """
+    Maps clustering labels to the best matching ground truth labels 
+    based on the confusion matrix (majority voting per cluster).
+    Useful for visualizing a 'classification-style' confusion matrix.
+    """
+    cm, classes, clusters = confusion_matrix_scratch(y_true, y_pred)
+    
+    # Map each cluster to the class it contains most frequently
+    cluster_to_class_map = {}
+    for j in range(cm.shape[1]): # Iterate columns (clusters)
+        # Find row (class) with max count for this cluster
+        best_class_idx = np.argmax(cm[:, j])
+        best_class = classes[best_class_idx]
+        original_cluster_label = clusters[j]
+        cluster_to_class_map[original_cluster_label] = best_class
+        
+    aligned_preds = np.array([cluster_to_class_map[p] for p in y_pred])
+    return aligned_preds
+
